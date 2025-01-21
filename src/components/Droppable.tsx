@@ -23,7 +23,7 @@ export const Droppable: React.FC<DroppableProps> = ({ id, title, children }) => 
     <div
       ref={setNodeRef}
       style={style}
-      data-parent={id} // Ensure this attribute is present
+      data-parent={id} 
       className="flex flex-col gap-4 p-4 border rounded-lg w-1/2 min-h-[300px]"
     >
       <h2 className="text-2xl font-semibold mb-2">{title}</h2>
