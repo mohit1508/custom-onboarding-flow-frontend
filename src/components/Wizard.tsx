@@ -58,7 +58,7 @@ const Wizard: React.FC = () => {
           const userResponse = await axios.get(`${backendUrl}/api/onboarding/step/${email}`);
           setUserData((prev) => ({
             ...prev,
-            email,
+            ...(stepResponse.data.current_step !== 1 ? { email } : {}),
             ...userResponse.data,
           }));
         }
