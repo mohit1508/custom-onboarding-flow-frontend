@@ -42,3 +42,20 @@ Before running this project, ensure you have the following installed:
 ```bash
 git clone https://github.com/mohit1508/custom-onboarding-flow-frontend
 cd custom-onboarding-flow-frontend
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Environment Variables
+Create a .env file in the root directory and add the following variables:
+```bash
+VITE_BACKEND_URL=<backend-server-url>
+```
+
+### 4. Run the Development Server
+```bash
+npm start
+```
