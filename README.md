@@ -1,50 +1,44 @@
-# React + TypeScript + Vite
+# Onboarding Wizard Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is the frontend for the onboarding wizard application. It guides users through a step-by-step onboarding process, collecting their information in a structured manner.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Multi-step onboarding wizard with dynamic step configurations.
+- Responsive UI built with **React**, **TypeScript**, and **Tailwind CSS**.
+- Backend communication using **Axios** for API integration.
+- Real-time validation for user inputs.
+- Seamless navigation between steps.
+- State management using React hooks.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Tech Stack
 
-- Configure the top-level `parserOptions` property like this:
+### Frontend
+- **React.js**: Component-based UI library.
+- **TypeScript**: Typed JavaScript for scalability and maintainability.
+- **Tailwind CSS**: Utility-first CSS framework for styling.
+- **Framer Motion**: Animation library for smooth transitions.
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Build Tools
+- **Vite**: Fast build tool and development server.
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+---
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Prerequisites
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+Before running this project, ensure you have the following installed:
+
+- **Node.js**: v16 or higher
+- **npm** or **yarn**: Package manager
+- Backend service: Refer to the backend repository setup.
+
+---
+
+## Setup Instructions
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/mohit1508/custom-onboarding-flow-frontend
+cd custom-onboarding-flow-frontend
