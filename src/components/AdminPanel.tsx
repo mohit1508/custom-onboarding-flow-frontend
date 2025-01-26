@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
 } from "@dnd-kit/core";
 import {
@@ -38,82 +39,71 @@ const AdminPanel: React.FC = () => {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-  
+
     if (!over || active.id === over.id) {
       setActiveId(null);
       return;
     }
-  
+
     const activeId = String(active.id);
     const overId = String(over.id);
-  
-    console.log("Active ID:", activeId);
-    console.log("Over ID:", overId);
-  
+
     const sourceStep = parseInt(active.data.current?.parent || "0", 10);
     const destStep = parseInt(over.data.current?.parent || "0", 10);
-  
-    console.log("Source Step:", sourceStep, "Destination Step:", destStep);
-  
+
     if (!sourceStep || !destStep) return;
-  
+
     // Prevent removing the last card from a step
     if (config[sourceStep]?.length === 1 && activeId === config[sourceStep][0]) {
       alert("Each step must have at least one card.");
       setActiveId(null);
       return;
     }
-  
+
     const sourceItems = Array.from(config[sourceStep] || []);
     const destItems = Array.from(config[destStep] || []);
-  
+
     // Handle drag-and-drop within the same step
     if (sourceStep === destStep) {
       const itemIndex = sourceItems.indexOf(activeId);
       const overIndex = sourceItems.indexOf(overId);
-  
-      // Reorder items within the same list
+
       sourceItems.splice(itemIndex, 1);
       sourceItems.splice(overIndex, 0, activeId);
-  
+
       const updatedConfig = {
         ...config,
         [sourceStep]: sourceItems,
       };
-  
-      console.log("Updated Config (same step):", updatedConfig);
-  
+
       setConfig(updatedConfig);
       setActiveId(null);
-  
-      // Save the updated configuration to the backend
+
       try {
         await axios.post(`${backendUrl}/api/admin/config`, { page: sourceStep, components: sourceItems });
       } catch (error) {
         console.error("Failed to save configuration:", error);
         alert("Failed to save changes. Please try again.");
       }
-  
+
       return;
     }
-  
+
     // Handle drag-and-drop between different steps
     const itemIndex = sourceItems.indexOf(activeId);
     const [movedItem] = sourceItems.splice(itemIndex, 1);
     const destIndex = destItems.indexOf(overId);
     destItems.splice(destIndex, 0, movedItem);
-  
+
     const updatedConfig = {
       ...config,
       [sourceStep]: sourceItems,
       [destStep]: destItems,
     };
-  
-    console.log("Updated Config (different step):", updatedConfig);
-  
+
     setConfig(updatedConfig);
     setActiveId(null);
-  
+
     try {
       await axios.post(`${backendUrl}/api/admin/config`, { page: sourceStep, components: sourceItems });
       await axios.post(`${backendUrl}/api/admin/config`, { page: destStep, components: destItems });
@@ -122,15 +112,24 @@ const AdminPanel: React.FC = () => {
       alert("Failed to save changes. Please try again.");
     }
   };
-  
-  
-    const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor)
-    );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Adds a small drag threshold for mobile
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // Adds a slight delay for better mobile interaction
+        tolerance: 5, // Ensures the drag starts only after moving a certain distance
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
   return (
-    <div className="flex flex-col gap-6 w-[1000px]">
+    <div className="flex flex-col gap-6 w-full max-w-[1000px]">
       <h1 className="text-3xl font-semibold">Admin Panel</h1>
       <DndContext
         sensors={sensors}
@@ -138,7 +137,7 @@ const AdminPanel: React.FC = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-8">
+        <div className="flex flex-col md:flex-row gap-8">
           {[2, 3].map((page) => (
             <Droppable key={page} id={`${page}`} title={`Step ${page}`}>
               <SortableContext items={config[page] || []} strategy={verticalListSortingStrategy}>

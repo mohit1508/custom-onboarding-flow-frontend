@@ -3,7 +3,7 @@ import DataTable from "../components/DataTable.tsx";
 
 const Data: React.FC = () => {
   return (
-    <div className="m-4">
+    <div className="p-4">
       <DataTable />
     </div>
   );

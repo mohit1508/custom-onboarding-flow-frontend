@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import AboutMe from "./FormFields/AboutMe";
 import AddressForm from "./FormFields/AddressForm";
 import BirthdatePicker from "./FormFields/BirthdatePicker";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext.tsx";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -37,8 +38,9 @@ const Wizard: React.FC = () => {
     zip: "",
     birthdate: "",
   });
-  const [isStepValid, setIsStepValid] = useState(false);
+  // const [isStepValid, setIsStepValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isSignedIn, setIsSignedIn, handleSignOut } = useAuth();
 
   const steps = ["Email & Password", "Personal Information I", "Personal Information II"];
 
@@ -49,45 +51,31 @@ const Wizard: React.FC = () => {
       try {
         const configResponse = await axios.get(`${backendUrl}/api/admin/config`);
         setConfig(configResponse.data);
-
+  
         const email = localStorage.getItem("user_email");
         if (email) {
           const stepResponse = await axios.get(`${backendUrl}/api/onboarding/step/${email}`);
           setCurrentStep(stepResponse.data.current_step);
 
           const userResponse = await axios.get(`${backendUrl}/api/onboarding/step/${email}`);
+          
+          const fetchedUserData = userResponse.data;
+          
           setUserData((prev) => ({
             ...prev,
             ...(stepResponse.data.current_step !== 1 ? { email } : {}),
-            ...userResponse.data,
+            ...fetchedUserData,
           }));
         }
       } catch (err) {
         console.error("Error fetching config or user data:", err);
       }
     };
-
+  
     fetchConfigAndUser();
   }, []);
 
-  const validateCurrentStep = useCallback(() => {
-    if (currentStep === 2 || currentStep === 3) {
-      const requiredFields = config[currentStep] || [];
-      const isValid = requiredFields.every((field) => {
-        const mappedField = fieldMapping[field];
-        if (!mappedField) return true;
-        const value = userData[mappedField];
-        return typeof value === "string" && value.trim() !== "";
-      });
-      setIsStepValid(isValid);
-    }
-  }, [currentStep, config, userData]);
-
-  useEffect(() => {
-    validateCurrentStep();
-  }, [currentStep, userData, validateCurrentStep]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setUserData((prev) => ({ ...prev, [name]: value }));
   };
@@ -102,7 +90,21 @@ const Wizard: React.FC = () => {
       const { current_step, user_data } = loginResponse.data;
       setUserData((prev) => ({ ...prev, ...user_data }));
       setCurrentStep(current_step);
+      const requiredFields = config[2] || [];
+        const isStep2Complete = requiredFields.every((field) => {
+          const mappedField = fieldMapping[field];
+          if (!mappedField) return true;
+          const value = user_data[mappedField];
+          return typeof value === "string" && value.trim() !== "";
+        });
+
+        if (isStep2Complete) {
+          setCurrentStep(3);
+        } else {
+          setCurrentStep(2);
+        }
       localStorage.setItem("user_email", userData.email);
+      setIsSignedIn(true);
       setError(null);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -116,6 +118,7 @@ const Wizard: React.FC = () => {
             if (registerResponse.status === 201) {
               setCurrentStep(2);
               localStorage.setItem("user_email", userData.email);
+              setIsSignedIn(true);
               setError(null);
               return;
             }
@@ -144,14 +147,59 @@ const Wizard: React.FC = () => {
     }
   };
 
+  const handleSignOutAndReset = () => {
+    handleSignOut(); // Sign out the user
+    setCurrentStep(1); // Reset to step 1
+    setUserData({
+      email: "",
+      password: "",
+      about_me: "",
+      street_address: "",
+      city: "",
+      state: "",
+      zip: "",
+      birthdate: "",
+    }); // Clear all user data
+    setError(null); // Clear any existing errors
+  };
+
   const handleSubmit = async () => {
-    try {
-      await saveUserData();
-      alert("Data submitted successfully!");
-      localStorage.removeItem("user_email");
-      setError(null);
-    } catch (err) {
-      setError(`Failed to submit data. ${err}`);
+    if (currentStep === 2 || currentStep === 3) {
+      const requiredFields = config[currentStep] || [];
+      const isValid = requiredFields.every((field) => {
+        const mappedField = fieldMapping[field];
+        if (!mappedField) return true;
+        const value = userData[mappedField];
+        return typeof value === "string" && value.trim() !== "";
+      });
+
+      if (requiredFields.includes("AddressForm")) {
+        // Validate all AddressForm fields
+        const addressFields = ["street_address", "city", "state", "zip"];
+        const isAddressValid = addressFields.every((field) => {
+          const value = userData[field as keyof UserData];
+          return typeof value === "string" && value.trim() !== "";
+        });
+  
+        if (!isAddressValid) {
+          setError("Please fill out all required fields.");
+          return;
+        }
+      }
+
+      if (!isValid) {
+        setError("Please fill out all required fields.");
+        return;
+      }
+
+      try {
+        await saveUserData();
+        alert("Data submitted successfully!");
+        //handleSignOutAndReset();
+        setError(null);
+      } catch (err) {
+        setError(`Failed to submit data. ${err}`);
+      }
     }
   };
 
@@ -171,6 +219,7 @@ const Wizard: React.FC = () => {
 
       try {
         await handleRegistration();
+        return;
       } catch (err) {
         console.error("Error during registration or login:", err);
         return;
@@ -185,6 +234,20 @@ const Wizard: React.FC = () => {
         const value = userData[mappedField];
         return typeof value === "string" && value.trim() !== "";
       });
+
+      if (requiredFields.includes("AddressForm")) {
+        // Validate all AddressForm fields
+        const addressFields = ["street_address", "city", "state", "zip"];
+        const isAddressValid = addressFields.every((field) => {
+          const value = userData[field as keyof UserData];
+          return typeof value === "string" && value.trim() !== "";
+        });
+  
+        if (!isAddressValid) {
+          setError("Please fill out all required fields.");
+          return;
+        }
+      }
 
       if (!isValid) {
         setError("Please fill out all required fields.");
@@ -210,7 +273,13 @@ const Wizard: React.FC = () => {
   };
 
   const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setError(null);
+    // setIsStepValid(true);
+    if (currentStep === 2) {
+      handleSignOutAndReset();
+    } else {
+      setCurrentStep((prev) => Math.max(prev - 1, 1));
+    }
   };
 
   const renderStep = () => {
@@ -218,22 +287,22 @@ const Wizard: React.FC = () => {
       return (
         <div className="flex flex-col gap-6">
           <h2 className="text-2xl font-semibold mb-4">Step 1: Email and Password</h2>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                className="input px-3 py-4 border bg-gray-200 rounded-lg placeholder-gray-500 text-xl"
-                value={userData.email}
-                onChange={handleInputChange}
+              type="email"
+              name="email"
+              placeholder="Email"
+              className="input px-3 py-4 border bg-gray-200 rounded-lg placeholder-gray-500 text-xl"
+              value={userData.email}
+              onChange={handleInputChange}
             />
             <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                className="input px-3 py-4 border bg-gray-200 rounded-lg placeholder-gray-500 text-xl"
-                value={userData.password}
-                onChange={handleInputChange}
+              type="password"
+              name="password"
+              placeholder="Password"
+              className="input px-3 py-4 border bg-gray-200 rounded-lg placeholder-gray-500 text-xl"
+              value={userData.password}
+              onChange={handleInputChange}
             />
           </div>
         </div>
@@ -266,8 +335,17 @@ const Wizard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 w-[1000px]">
-      <h1 className="text-3xl font-semibold">Onboarding Wizard</h1>
-      {/* Progress Bar */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-semibold">Onboarding Wizard</h1>
+        {currentStep > 1 && isSignedIn && (
+          <button
+            onClick={handleSignOutAndReset}
+            className="btn px-3 md:px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-lg font-semibold"
+          >
+            Sign Out
+          </button>
+        )}
+      </div>
       <div className="relative w-full bg-gray-200 h-4 rounded-full -mb-4">
         <motion.div
           className="absolute top-0 left-0 h-4 bg-green-500 rounded-full"
@@ -302,24 +380,24 @@ const Wizard: React.FC = () => {
         {renderStep()}
       </motion.div>
       <div className="flex gap-6 mt-4">
-        <button 
-            onClick={prevStep} 
-            disabled={currentStep === 1} 
-            className="btn px-10 py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xl font-semibold"
-          >
+        <button
+          onClick={prevStep}
+          disabled={currentStep === 1}
+          className="btn px-10 py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xl font-semibold"
+        >
           Back
         </button>
         {currentStep === 3 ? (
-          <button 
-            onClick={handleSubmit} 
-            disabled={!isStepValid} 
+          <button
+            onClick={handleSubmit}
+            
             className="btn px-10 py-4 bg-green-800 hover:bg-green-700 text-white rounded-lg text-xl font-semibold"
           >
             Submit
           </button>
         ) : (
-          <button 
-            onClick={nextStep} 
+          <button
+            onClick={nextStep}
             className="btn px-10 py-4 bg-green-800 hover:bg-green-700 text-white rounded-lg text-xl font-semibold"
           >
             Next
