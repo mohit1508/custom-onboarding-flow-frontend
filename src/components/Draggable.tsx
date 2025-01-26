@@ -26,7 +26,7 @@ export const Draggable: React.FC<DraggableProps> = ({ id, parent, children }) =>
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-white p-4 border rounded-lg shadow-md mb-2 cursor-pointer text-xl"
+      className="bg-white p-4 border rounded-lg shadow-md mb-2 cursor-pointer text-xl touch-none"
     >
       {children}
     </div>
